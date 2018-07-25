@@ -11,9 +11,9 @@ const DEFAULTSEARCHRESULTSIZE = 10;
 const DEFAULTSEARCHRESULTFROM = 0;
 
 export const doSearch = (
-  rawQuery,
-  size = DEFAULTSEARCHRESULTSIZE,
-  from = DEFAULTSEARCHRESULTFROM
+  rawQuery: string,
+  size: number = DEFAULTSEARCHRESULTSIZE,
+  from: number = DEFAULTSEARCHRESULTFROM
 ) => (dispatch, getState) => {
   const state = getState();
   const query = rawQuery.replace(/^lbry:\/\//i, '');

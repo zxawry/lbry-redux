@@ -1481,14 +1481,9 @@ var _action_types = __webpack_require__(4);
 
 var ACTIONS = _interopRequireWildcard(_action_types);
 
-var _Notification = __webpack_require__(1);
-
-var _Notification2 = _interopRequireDefault(_Notification);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
+/*:: import type Notification from 'types/Notification';*/
 function doNotify(notification /*: Notification*/, notificationProps /*: NotificationProps*/) {
   return {
     type: ACTIONS.CREATE_NOTIFICATION,
@@ -1710,7 +1705,7 @@ var CHECK_SUBSCRIPTION_COMPLETED = exports.CHECK_SUBSCRIPTION_COMPLETED = 'CHECK
 var CHECK_SUBSCRIPTIONS_SUBSCRIBE = exports.CHECK_SUBSCRIPTIONS_SUBSCRIBE = 'CHECK_SUBSCRIPTIONS_SUBSCRIBE';
 
 // Media controls
-var MEDIA_POSITION = exports.MEDIA_POSITION = 'MEDIA_POSITION';
+var HISTORY_SET_POSITION = exports.HISTORY_SET_POSITION = 'HISTORY_SET_POSITION';
 
 // Publishing
 var CLEAR_PUBLISH = exports.CLEAR_PUBLISH = 'CLEAR_PUBLISH';
@@ -4082,9 +4077,9 @@ var DEFAULTSEARCHRESULTSIZE = 10; // @flow
 
 var DEFAULTSEARCHRESULTFROM = 0;
 
-var doSearch = exports.doSearch = function doSearch(rawQuery) {
-  var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULTSEARCHRESULTSIZE;
-  var from = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULTSEARCHRESULTFROM;
+var doSearch = exports.doSearch = function doSearch(rawQuery /*: string*/) {
+  var size /*: number*/ = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULTSEARCHRESULTSIZE;
+  var from /*: number*/ = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULTSEARCHRESULTFROM;
   return function (dispatch, getState) {
     var state = getState();
     var query = rawQuery.replace(/^lbry:\/\//i, '');
