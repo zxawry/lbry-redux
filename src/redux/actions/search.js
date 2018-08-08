@@ -104,13 +104,13 @@ export const getSearchSuggestions = (value: string) => dispatch => {
 
     suggestions.push(
       {
+        value: claimName,
+        type: SEARCH_TYPES.SEARCH,
+      },
+      {
         value: uri,
         shorthand: isChannel ? claimName.slice(1) : claimName,
         type: isChannel ? SEARCH_TYPES.CHANNEL : SEARCH_TYPES.FILE,
-      },
-      {
-        value: claimName,
-        type: SEARCH_TYPES.SEARCH,
       }
     );
   } catch (e) {

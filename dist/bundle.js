@@ -1502,14 +1502,9 @@ var _action_types = __webpack_require__(4);
 
 var ACTIONS = _interopRequireWildcard(_action_types);
 
-var _Notification = __webpack_require__(1);
-
-var _Notification2 = _interopRequireDefault(_Notification);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
+/*:: import type { Notification, NotificationProps } from 'types/Notification';*/
 function doNotify(notification /*: Notification*/, notificationProps /*: NotificationProps*/) {
   return {
     type: ACTIONS.CREATE_NOTIFICATION,
@@ -4284,12 +4279,12 @@ var getSearchSuggestions = exports.getSearchSuggestions = function getSearchSugg
           isChannel = _parseURI.isChannel;
 
       suggestions.push({
+        value: claimName,
+        type: SEARCH_TYPES.SEARCH
+      }, {
         value: uri,
         shorthand: isChannel ? claimName.slice(1) : claimName,
         type: isChannel ? SEARCH_TYPES.CHANNEL : SEARCH_TYPES.FILE
-      }, {
-        value: claimName,
-        type: SEARCH_TYPES.SEARCH
       });
     } catch (e) {
       suggestions.push({
