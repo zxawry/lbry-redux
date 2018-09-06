@@ -5888,6 +5888,7 @@ var CONFIRM_THUMBNAIL_UPLOAD = exports.CONFIRM_THUMBNAIL_UPLOAD = 'confirm_thumb
 var WALLET_ENCRYPT = exports.WALLET_ENCRYPT = 'wallet_encrypt';
 var WALLET_DECRYPT = exports.WALLET_DECRYPT = 'wallet_decrypt';
 var WALLET_UNLOCK = exports.WALLET_UNLOCK = 'wallet_unlock';
+var REWARD_CODE = exports.REWARD_CODE = 'reward_code';
 
 /***/ }),
 /* 37 */
