@@ -1,48 +1,25 @@
-// @flow
-import type { SearchState, SearchOptions, SearchSuggestion } from 'types/Search';
-import { SEARCH_TYPES, SEARCH_OPTIONS } from 'constants/search';
-import { getSearchQueryString } from 'util/query_params';
+import * as SEARCH_TYPES from 'constants/search';
 import { normalizeURI, parseURI } from 'lbryURI';
 import { selectCurrentPage, selectCurrentParams } from 'redux/selectors/navigation';
 import { createSelector } from 'reselect';
 
-type State = { search: SearchState };
+export const selectState = state => state.search || {};
 
-export const selectState = (state: State): SearchState => state.search;
+export const selectSearchValue = createSelector(selectState, state => state.searchQuery);
 
-export const selectSearchValue: (state: State) => string = createSelector(
-  selectState,
-  state => state.searchQuery
-);
+export const selectSuggestions = createSelector(selectState, state => state.suggestions);
 
-export const selectSearchOptions: (state: State) => SearchOptions = createSelector(
-  selectState,
-  state => state.options
-);
-
-export const selectSuggestions: (
-  state: State
-) => { [string]: Array<SearchSuggestion> } = createSelector(
-  selectState,
-  state => state.suggestions
-);
-
-export const selectSearchQuery: (state: State) => ?string = createSelector(
+export const selectSearchQuery = createSelector(
   selectCurrentPage,
   selectCurrentParams,
-  (page: string, params: ?{ query: string }) => (page === 'search' ? params && params.query : null)
+  (page, params) => (page === 'search' ? params && params.query : null)
 );
 
-export const selectIsSearching: (state: State) => boolean = createSelector(
-  selectState,
-  state => state.searching
-);
+export const selectIsSearching = createSelector(selectState, state => state.searching);
 
-export const selectSearchUrisByQuery: (
-  state: State
-) => { [string]: Array<string> } = createSelector(selectState, state => state.urisByQuery);
+export const selectSearchUrisByQuery = createSelector(selectState, state => state.urisByQuery);
 
-export const makeSelectSearchUris = (query: string): ((state: State) => Array<string>) =>
+export const makeSelectSearchUris = query =>
   // replace statement below is kind of ugly, and repeated in doSearch action
   createSelector(
     selectSearchUrisByQuery,
@@ -53,7 +30,7 @@ export const selectWunderBarAddress = createSelector(
   selectCurrentPage,
   selectSearchQuery,
   selectCurrentParams,
-  (page: string, query: string, params: { uri: string }) => {
+  (page, query, params) => {
     // only populate the wunderbar address if we are on the file/channel pages
     // or show the search query
     if (page === 'show') {
@@ -63,12 +40,13 @@ export const selectWunderBarAddress = createSelector(
   }
 );
 
-export const selectSearchBarFocused: boolean = createSelector(selectState, state => state.focused);
+export const selectSearchBarFocused = createSelector(selectState, state => state.focused);
+// export const selectSear
 
-export const selectSearchSuggestions: Array<SearchSuggestion> = createSelector(
+export const selectSearchSuggestions = createSelector(
   selectSearchValue,
   selectSuggestions,
-  (query: string, suggestions: { [string]: Array<string> }) => {
+  (query, suggestions) => {
     if (!query) {
       return [];
     }
@@ -139,23 +117,3 @@ export const selectSearchSuggestions: Array<SearchSuggestion> = createSelector(
     return searchSuggestions;
   }
 );
-
-// Creates a query string based on the state in the search reducer
-// Can be overrided by passing in custom sizes/from values for other areas pagination
-export const makeSelectQueryWithOptions = (
-  customQuery: ?string,
-  customSize: ?number,
-  customFrom: ?number,
-  isBackgroundSearch: boolean = false // If it's a background search, don't use the users settings
-) =>
-  createSelector(selectSearchQuery, selectSearchOptions, (query, options) => {
-    const size = customSize || options[SEARCH_OPTIONS.RESULT_COUNT];
-
-    const queryString = getSearchQueryString(
-      customQuery || query,
-      { ...options, size, from: customFrom },
-      !isBackgroundSearch
-    );
-
-    return queryString;
-  });

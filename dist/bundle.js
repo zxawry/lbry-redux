@@ -3646,18 +3646,18 @@ var makeSelectRecommendedContentForUri = exports.makeSelectRecommendedContentFor
 
     var recommendedContent = void 0;
     if (claim) {
-      // If we are at a vanity uri, build the full uri so we can properly filter
-      var currentUri = atVanityURI ? (0, _lbryURI.buildURI)({ claimId: claim.claim_id, claimName: claim.name }) : uri;
-
       var title = claim.value.stream.metadata.title;
 
-
-      var searchQuery = (0, _query_params.getSearchQueryString)(title.replace(/\//, ' '));
-
-      var searchUris = searchUrisByQuery[searchQuery];
+      var searchUris = searchUrisByQuery[title.replace(/\//, ' ')];
       if (searchUris) {
+        // If we are at a vanity uri, we can't do a uri match
+        // The first search result _should_ be the same as the claim a user is on
+        if (atVanityURI) {
+          searchUris = searchUris.slice(1);
+        }
+
         searchUris = searchUris.filter(function (searchUri) {
-          return searchUri !== currentUri;
+          return searchUri !== uri;
         });
         recommendedContent = searchUris;
       }
@@ -4015,13 +4015,11 @@ var SEARCH_OPTIONS = exports.SEARCH_OPTIONS = {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.makeSelectQueryWithOptions = exports.selectSearchSuggestions = exports.selectSearchBarFocused = exports.selectWunderBarAddress = exports.makeSelectSearchUris = exports.selectSearchUrisByQuery = exports.selectIsSearching = exports.selectSearchQuery = exports.selectSuggestions = exports.selectSearchOptions = exports.selectSearchValue = exports.selectState = undefined;
-
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+exports.selectSearchSuggestions = exports.selectSearchBarFocused = exports.selectWunderBarAddress = exports.makeSelectSearchUris = exports.selectSearchUrisByQuery = exports.selectIsSearching = exports.selectSearchQuery = exports.selectSuggestions = exports.selectSearchValue = exports.selectState = undefined;
 
 var _search = __webpack_require__(21);
 
-var _query_params = __webpack_require__(20);
+var SEARCH_TYPES = _interopRequireWildcard(_search);
 
 var _lbryURI = __webpack_require__(3);
 
@@ -4029,50 +4027,42 @@ var _navigation = __webpack_require__(18);
 
 var _reselect = __webpack_require__(19);
 
-// @flow
-/*:: import type { SearchState, SearchOptions, SearchSuggestion } from 'types/Search';*/
-/*:: type State = { search: SearchState };*/
-var selectState = exports.selectState = function selectState(state /*: State*/) /*: SearchState*/ {
-  return state.search;
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+var selectState = exports.selectState = function selectState(state) {
+  return state.search || {};
 };
 
-var selectSearchValue /*: (state: State) => string*/ = exports.selectSearchValue = (0, _reselect.createSelector)(selectState, function (state) {
+var selectSearchValue = exports.selectSearchValue = (0, _reselect.createSelector)(selectState, function (state) {
   return state.searchQuery;
 });
 
-var selectSearchOptions /*: (state: State) => SearchOptions*/ = exports.selectSearchOptions = (0, _reselect.createSelector)(selectState, function (state) {
-  return state.options;
-});
-
-var selectSuggestions /*: (
-                        state: State
-                      ) => { [string]: Array<SearchSuggestion> }*/ = exports.selectSuggestions = (0, _reselect.createSelector)(selectState, function (state) {
+var selectSuggestions = exports.selectSuggestions = (0, _reselect.createSelector)(selectState, function (state) {
   return state.suggestions;
 });
 
-var selectSearchQuery /*: (state: State) => ?string*/ = exports.selectSearchQuery = (0, _reselect.createSelector)(_navigation.selectCurrentPage, _navigation.selectCurrentParams, function (page /*: string*/, params /*: ?{ query: string }*/) {
+var selectSearchQuery = exports.selectSearchQuery = (0, _reselect.createSelector)(_navigation.selectCurrentPage, _navigation.selectCurrentParams, function (page, params) {
   return page === 'search' ? params && params.query : null;
 });
 
-var selectIsSearching /*: (state: State) => boolean*/ = exports.selectIsSearching = (0, _reselect.createSelector)(selectState, function (state) {
+var selectIsSearching = exports.selectIsSearching = (0, _reselect.createSelector)(selectState, function (state) {
   return state.searching;
 });
 
-var selectSearchUrisByQuery /*: (
-                              state: State
-                            ) => { [string]: Array<string> }*/ = exports.selectSearchUrisByQuery = (0, _reselect.createSelector)(selectState, function (state) {
+var selectSearchUrisByQuery = exports.selectSearchUrisByQuery = (0, _reselect.createSelector)(selectState, function (state) {
   return state.urisByQuery;
 });
 
-var makeSelectSearchUris = exports.makeSelectSearchUris = function makeSelectSearchUris(query
-// replace statement below is kind of ugly, and repeated in doSearch action
-/*: string*/) /*: ((state: State) => Array<string>)*/ {
-  return (0, _reselect.createSelector)(selectSearchUrisByQuery, function (byQuery) {
-    return byQuery[query ? query.replace(/^lbry:\/\//i, '').replace(/\//, ' ') : query];
-  });
+var makeSelectSearchUris = exports.makeSelectSearchUris = function makeSelectSearchUris(query) {
+  return (
+    // replace statement below is kind of ugly, and repeated in doSearch action
+    (0, _reselect.createSelector)(selectSearchUrisByQuery, function (byQuery) {
+      return byQuery[query ? query.replace(/^lbry:\/\//i, '').replace(/\//, ' ') : query];
+    })
+  );
 };
 
-var selectWunderBarAddress = exports.selectWunderBarAddress = (0, _reselect.createSelector)(_navigation.selectCurrentPage, selectSearchQuery, _navigation.selectCurrentParams, function (page /*: string*/, query /*: string*/, params /*: { uri: string }*/) {
+var selectWunderBarAddress = exports.selectWunderBarAddress = (0, _reselect.createSelector)(_navigation.selectCurrentPage, selectSearchQuery, _navigation.selectCurrentParams, function (page, query, params) {
   // only populate the wunderbar address if we are on the file/channel pages
   // or show the search query
   if (page === 'show') {
@@ -4081,11 +4071,12 @@ var selectWunderBarAddress = exports.selectWunderBarAddress = (0, _reselect.crea
   return query;
 });
 
-var selectSearchBarFocused /*: boolean*/ = exports.selectSearchBarFocused = (0, _reselect.createSelector)(selectState, function (state) {
+var selectSearchBarFocused = exports.selectSearchBarFocused = (0, _reselect.createSelector)(selectState, function (state) {
   return state.focused;
 });
+// export const selectSear
 
-var selectSearchSuggestions /*: Array<SearchSuggestion>*/ = exports.selectSearchSuggestions = (0, _reselect.createSelector)(selectSearchValue, selectSuggestions, function (query /*: string*/, suggestions /*: { [string]: Array<string> }*/) {
+var selectSearchSuggestions = exports.selectSearchSuggestions = (0, _reselect.createSelector)(selectSearchValue, selectSuggestions, function (query, suggestions) {
   if (!query) {
     return [];
   }
@@ -4097,7 +4088,7 @@ var selectSearchSuggestions /*: Array<SearchSuggestion>*/ = exports.selectSearch
     // They are probably typing/pasting in a lbry uri
     return [{
       value: query,
-      type: _search.SEARCH_TYPES.FILE
+      type: SEARCH_TYPES.FILE
     }];
   } else if (queryIsPrefix) {
     // If it is a prefix, wait until something else comes to figure out what to do
@@ -4106,24 +4097,24 @@ var selectSearchSuggestions /*: Array<SearchSuggestion>*/ = exports.selectSearch
 
   var searchSuggestions = [];
   try {
-    var _uri = (0, _lbryURI.normalizeURI)(query);
+    var uri = (0, _lbryURI.normalizeURI)(query);
 
-    var _parseURI = (0, _lbryURI.parseURI)(_uri),
+    var _parseURI = (0, _lbryURI.parseURI)(uri),
         claimName = _parseURI.claimName,
         isChannel = _parseURI.isChannel;
 
     searchSuggestions.push({
       value: claimName,
-      type: _search.SEARCH_TYPES.SEARCH
+      type: SEARCH_TYPES.SEARCH
     }, {
-      value: _uri,
+      value: uri,
       shorthand: isChannel ? claimName.slice(1) : claimName,
-      type: isChannel ? _search.SEARCH_TYPES.CHANNEL : _search.SEARCH_TYPES.FILE
+      type: isChannel ? SEARCH_TYPES.CHANNEL : SEARCH_TYPES.FILE
     });
   } catch (e) {
     searchSuggestions.push({
       value: query,
-      type: _search.SEARCH_TYPES.SEARCH
+      type: SEARCH_TYPES.SEARCH
     });
   }
 
@@ -4134,22 +4125,22 @@ var selectSearchSuggestions /*: Array<SearchSuggestion>*/ = exports.selectSearch
     }).map(function (suggestion) {
       // determine if it's a channel
       try {
-        var _uri2 = (0, _lbryURI.normalizeURI)(suggestion);
+        var _uri = (0, _lbryURI.normalizeURI)(suggestion);
 
-        var _parseURI2 = (0, _lbryURI.parseURI)(_uri2),
+        var _parseURI2 = (0, _lbryURI.parseURI)(_uri),
             _claimName = _parseURI2.claimName,
             _isChannel = _parseURI2.isChannel;
 
         return {
-          value: _uri2,
+          value: _uri,
           shorthand: _isChannel ? _claimName.slice(1) : _claimName,
-          type: _isChannel ? _search.SEARCH_TYPES.CHANNEL : _search.SEARCH_TYPES.FILE
+          type: _isChannel ? SEARCH_TYPES.CHANNEL : SEARCH_TYPES.FILE
         };
       } catch (e) {
         // search result includes some character that isn't valid in claim names
         return {
           value: suggestion,
-          type: _search.SEARCH_TYPES.SEARCH
+          type: SEARCH_TYPES.SEARCH
         };
       }
     }));
@@ -4157,20 +4148,6 @@ var selectSearchSuggestions /*: Array<SearchSuggestion>*/ = exports.selectSearch
 
   return searchSuggestions;
 });
-
-// Creates a query string based on the state in the search reducer
-// Can be overrided by passing in custom sizes/from values for other areas pagination
-var makeSelectQueryWithOptions = exports.makeSelectQueryWithOptions = function makeSelectQueryWithOptions(customQuery /*: ?string*/, customSize /*: ?number*/, customFrom // If it's a background search, don't use the users settings
-/*: ?number*/) {
-  var isBackgroundSearch /*: boolean*/ = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
-  return (0, _reselect.createSelector)(selectSearchQuery, selectSearchOptions, function (query, options) {
-    var size = customSize || options[_search.SEARCH_OPTIONS.RESULT_COUNT];
-
-    var queryString = (0, _query_params.getSearchQueryString)(customQuery || query, _extends({}, options, { size: size, from: customFrom }), !isBackgroundSearch);
-
-    return queryString;
-  });
-};
 
 /***/ }),
 /* 23 */
@@ -5295,7 +5272,7 @@ var selectFileListDownloadedSort = exports.selectFileListDownloadedSort = (0, _r
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.doUpdateSearchOptions = exports.doBlurSearchInput = exports.doFocusSearchInput = exports.doUpdateSearchQuery = exports.getSearchSuggestions = exports.doSearch = exports.setSearchApi = undefined;
+exports.doBlurSearchInput = exports.doFocusSearchInput = exports.doUpdateSearchQuery = exports.getSearchSuggestions = exports.doSearch = undefined;
 
 var _action_types = __webpack_require__(2);
 
@@ -5321,25 +5298,17 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-// @flow
-/*:: import type { SearchState, SearchOptions } from 'types/Search';*/
-
-
+var DEFAULTSEARCHRESULTSIZE = 10;
+var DEFAULTSEARCHRESULTFROM = 0;
 var DEBOUNCED_SEARCH_SUGGESTION_MS = 300;
 /*:: type Dispatch = (action: any) => any;*/
-
-
-// We can't use env's because they aren't passed into node_modules
-/*:: type GetState = () => { search: SearchState };*/
-var CONNECTION_STRING = 'https://lighthouse.lbry.io/';
-
-var setSearchApi = exports.setSearchApi = function setSearchApi(endpoint /*: string*/) {
-  CONNECTION_STRING = endpoint.replace(/\/*$/, '/'); // exactly one slash at the end;
-};
-
-var doSearch = exports.doSearch = function doSearch(rawQuery /*: string*/, size /*: ?number*/, from /*: ?number*/) {
+/*:: type GetState = () => {};*/
+var doSearch = exports.doSearch = function doSearch(rawQuery /*: string*/) {
+  var size /*: number*/ = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULTSEARCHRESULTSIZE;
+  var from /*: number*/ = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : DEFAULTSEARCHRESULTFROM;
   var isBackgroundSearch /*: boolean*/ = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
   return function (dispatch /*: Dispatch*/, getState /*: GetState*/) {
+    var state = getState();
     var query = rawQuery.replace(/^lbry:\/\//i, '').replace(/\//, ' ');
 
     if (!query) {
@@ -5349,11 +5318,8 @@ var doSearch = exports.doSearch = function doSearch(rawQuery /*: string*/, size 
       return;
     }
 
-    var state = getState();
-    var queryWithOptions = (0, _search.makeSelectQueryWithOptions)(query, size, from, isBackgroundSearch)(state);
-
     // If we have already searched for something, we don't need to do anything
-    var urisForQuery = (0, _search.makeSelectSearchUris)(queryWithOptions)(state);
+    var urisForQuery = (0, _search.makeSelectSearchUris)(query)(state);
     if (urisForQuery && !!urisForQuery.length) {
       return;
     }
@@ -5373,7 +5339,8 @@ var doSearch = exports.doSearch = function doSearch(rawQuery /*: string*/, size 
       });
     }
 
-    fetch(CONNECTION_STRING + 'search?' + queryWithOptions).then(_handleFetch2.default).then(function (data) {
+    var encodedQuery = encodeURIComponent(query);
+    fetch('https://lighthouse.lbry.io/search?s=' + encodedQuery + '&size=' + size + '&from=' + from).then(_handleFetch2.default).then(function (data) {
       var uris = [];
       var actions = [];
 
@@ -5389,7 +5356,7 @@ var doSearch = exports.doSearch = function doSearch(rawQuery /*: string*/, size 
       actions.push({
         type: ACTIONS.SEARCH_SUCCESS,
         data: {
-          query: queryWithOptions,
+          query: query,
           uris: uris
         }
       });
@@ -5419,7 +5386,7 @@ var getSearchSuggestions = exports.getSearchSuggestions = function getSearchSugg
       return;
     }
 
-    fetch(CONNECTION_STRING + 'autocomplete?s=' + searchValue).then(_handleFetch2.default).then(function (apiSuggestions) {
+    fetch('https://lighthouse.lbry.io/autocomplete?s=' + searchValue).then(_handleFetch2.default).then(function (apiSuggestions) {
       dispatch({
         type: ACTIONS.UPDATE_SEARCH_SUGGESTIONS,
         data: {
@@ -5465,23 +5432,6 @@ var doBlurSearchInput = exports.doBlurSearchInput = function doBlurSearchInput()
     return dispatch({
       type: ACTIONS.SEARCH_BLUR
     });
-  };
-};
-
-var doUpdateSearchOptions = exports.doUpdateSearchOptions = function doUpdateSearchOptions(newOptions /*: SearchOptions*/) {
-  return function (dispatch /*: Dispatch*/, getState /*: GetState*/) {
-    var state = getState();
-    var searchQuery = (0, _search.selectSearchQuery)(state);
-
-    dispatch({
-      type: ACTIONS.UPDATE_SEARCH_OPTIONS,
-      data: newOptions
-    });
-
-    if (searchQuery) {
-      // After updating, perform a search with the new options
-      dispatch(doSearch(searchQuery));
-    }
   };
 };
 
@@ -6443,9 +6393,10 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.searchReducer = undefined;
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+var _handleActions;
 
-var _options, _handleActions;
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; // @flow
+
 
 var _action_types = __webpack_require__(2);
 
@@ -6453,28 +6404,55 @@ var ACTIONS = _interopRequireWildcard(_action_types);
 
 var _reduxUtils = __webpack_require__(42);
 
-var _search = __webpack_require__(21);
-
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; } // @flow
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-
-/*:: import type {
-  SearchState,
-  SearchSuccess,
-  UpdateSearchQuery,
-  UpdateSearchSuggestions,
-  HistoryNavigate,
-  UpdateSearchOptions,
-} from 'types/Search';*/
+/*:: type SearchSuccess = {
+  type: ACTIONS.SEARCH_SUCCESS,
+  data: {
+    query: string,
+    uris: Array<string>,
+  },
+};*/
+/*:: type UpdateSearchQuery = {
+  type: ACTIONS.UPDATE_SEARCH_QUERY,
+  data: {
+    query: string,
+  },
+};*/
+/*:: type SearchSuggestion = {
+  value: string,
+  shorthand: string,
+  type: string,
+};*/
+/*:: type UpdateSearchSuggestions = {
+  type: ACTIONS.UPDATE_SEARCH_SUGGESTIONS,
+  data: {
+    query: string,
+    suggestions: Array<SearchSuggestion>,
+  },
+};*/
+/*:: type SearchState = {
+  isActive: boolean,
+  searchQuery: string,
+  suggestions: Array<SearchSuggestion>,
+  urisByQuery: {},
+};*/
+/*:: type HistoryNavigate = {
+  type: ACTIONS.HISTORY_NAVIGATE,
+  data: {
+    url: string,
+    index?: number,
+    scrollY?: number,
+  },
+};*/
 
 
 var defaultState = {
   isActive: false, // does the user have any typed text in the search input
   focused: false, // is the search input focused
   searchQuery: '', // needs to be an empty string for input focusing
-  options: (_options = {}, _defineProperty(_options, _search.SEARCH_OPTIONS.RESULT_COUNT, 30), _defineProperty(_options, _search.SEARCH_OPTIONS.CLAIM_TYPE, _search.SEARCH_OPTIONS.INCLUDE_FILES_AND_CHANNELS), _defineProperty(_options, _search.SEARCH_OPTIONS.MEDIA_AUDIO, true), _defineProperty(_options, _search.SEARCH_OPTIONS.MEDIA_VIDEO, true), _defineProperty(_options, _search.SEARCH_OPTIONS.MEDIA_TEXT, true), _defineProperty(_options, _search.SEARCH_OPTIONS.MEDIA_IMAGE, true), _defineProperty(_options, _search.SEARCH_OPTIONS.MEDIA_APPLICATION, true), _options),
   suggestions: {},
   urisByQuery: {}
 };
@@ -6525,14 +6503,6 @@ var searchReducer = exports.searchReducer = (0, _reduxUtils.handleActions)((_han
 }), _defineProperty(_handleActions, ACTIONS.SEARCH_BLUR, function (state /*: SearchState*/) /*: SearchState*/ {
   return _extends({}, state, {
     focused: false
-  });
-}), _defineProperty(_handleActions, ACTIONS.UPDATE_SEARCH_OPTIONS, function (state /*: SearchState*/, action /*: UpdateSearchOptions*/) /*: SearchState*/ {
-  var oldOptions = state.options;
-
-  var newOptions = action.data;
-  var options = _extends({}, oldOptions, newOptions);
-  return _extends({}, state, {
-    options: options
   });
 }), _handleActions), defaultState);
 
