@@ -1,4 +1,4 @@
-import * as SEARCH_TYPES from 'constants/search';
+import { SEARCH_TYPES } from 'constants/search';
 import { normalizeURI, parseURI } from 'lbryURI';
 import { selectCurrentPage, selectCurrentParams } from 'redux/selectors/navigation';
 import { createSelector } from 'reselect';

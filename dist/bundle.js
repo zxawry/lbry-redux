@@ -4019,15 +4019,11 @@ exports.selectSearchSuggestions = exports.selectSearchBarFocused = exports.selec
 
 var _search = __webpack_require__(21);
 
-var SEARCH_TYPES = _interopRequireWildcard(_search);
-
 var _lbryURI = __webpack_require__(3);
 
 var _navigation = __webpack_require__(18);
 
 var _reselect = __webpack_require__(19);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 var selectState = exports.selectState = function selectState(state) {
   return state.search || {};
@@ -4088,7 +4084,7 @@ var selectSearchSuggestions = exports.selectSearchSuggestions = (0, _reselect.cr
     // They are probably typing/pasting in a lbry uri
     return [{
       value: query,
-      type: SEARCH_TYPES.FILE
+      type: _search.SEARCH_TYPES.FILE
     }];
   } else if (queryIsPrefix) {
     // If it is a prefix, wait until something else comes to figure out what to do
@@ -4105,16 +4101,16 @@ var selectSearchSuggestions = exports.selectSearchSuggestions = (0, _reselect.cr
 
     searchSuggestions.push({
       value: claimName,
-      type: SEARCH_TYPES.SEARCH
+      type: _search.SEARCH_TYPES.SEARCH
     }, {
       value: uri,
       shorthand: isChannel ? claimName.slice(1) : claimName,
-      type: isChannel ? SEARCH_TYPES.CHANNEL : SEARCH_TYPES.FILE
+      type: isChannel ? _search.SEARCH_TYPES.CHANNEL : _search.SEARCH_TYPES.FILE
     });
   } catch (e) {
     searchSuggestions.push({
       value: query,
-      type: SEARCH_TYPES.SEARCH
+      type: _search.SEARCH_TYPES.SEARCH
     });
   }
 
@@ -4134,13 +4130,13 @@ var selectSearchSuggestions = exports.selectSearchSuggestions = (0, _reselect.cr
         return {
           value: _uri,
           shorthand: _isChannel ? _claimName.slice(1) : _claimName,
-          type: _isChannel ? SEARCH_TYPES.CHANNEL : SEARCH_TYPES.FILE
+          type: _isChannel ? _search.SEARCH_TYPES.CHANNEL : _search.SEARCH_TYPES.FILE
         };
       } catch (e) {
         // search result includes some character that isn't valid in claim names
         return {
           value: suggestion,
-          type: SEARCH_TYPES.SEARCH
+          type: _search.SEARCH_TYPES.SEARCH
         };
       }
     }));
