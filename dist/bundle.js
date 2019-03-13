@@ -2618,22 +2618,20 @@ Lbry.setDaemonConnectionString = function (value) {
   Lbry.daemonConnectionString = value;
 };
 
-var lbryProxy = new Proxy(Lbry, {
-  get: function get(target, name) {
-    if (name in target) {
-      return target[name];
-    }
+// let lbryProxy = new Proxy(Lbry, {
+//   get(target, name) {
+//     if (name in target) {
+//       return target[name];
+//     }
 
-    return function () {
-      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      return new Promise(function (resolve, reject) {
-        apiCall(name, params, resolve, reject);
-      });
-    };
-  }
-});
+//     return (params = {}) =>
+//       new Promise((resolve, reject) => {
+//         apiCall(name, params, resolve, reject);
+//       });
+//   },
+// });
 
-exports.default = lbryProxy;
+exports.default = Lbry;
 
 /***/ }),
 /* 10 */
