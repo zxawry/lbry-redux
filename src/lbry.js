@@ -218,17 +218,20 @@ Lbry.setDaemonConnectionString = value => {
   Lbry.daemonConnectionString = value;
 };
 
-// let lbryProxy = new Proxy(Lbry, {
-//   get(target, name) {
-//     if (name in target) {
-//       return target[name];
-//     }
+let lbryProxy = new Proxy(
+  {},
+  {
+    get(x, name) {
+      if (name in Lbry) {
+        return Lbry[name];
+      }
 
-//     return (params = {}) =>
-//       new Promise((resolve, reject) => {
-//         apiCall(name, params, resolve, reject);
-//       });
-//   },
-// });
+      return (params = {}) =>
+        new Promise((resolve, reject) => {
+          apiCall(name, params, resolve, reject);
+        });
+    },
+  }
+);
 
-export default Lbry;
+// export default Lbry;

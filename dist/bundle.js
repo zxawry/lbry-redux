@@ -2358,10 +2358,6 @@ function doFetchClaimCountByChannel(uri) {
 "use strict";
 
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
 __webpack_require__(10);
 
 var CHECK_DAEMON_STARTED_TRY_NUMBER = 200; // @flow
@@ -2618,20 +2614,22 @@ Lbry.setDaemonConnectionString = function (value) {
   Lbry.daemonConnectionString = value;
 };
 
-// let lbryProxy = new Proxy(Lbry, {
-//   get(target, name) {
-//     if (name in target) {
-//       return target[name];
-//     }
+var lbryProxy = new Proxy({}, {
+  get: function get(x, name) {
+    if (name in Lbry) {
+      return Lbry[name];
+    }
 
-//     return (params = {}) =>
-//       new Promise((resolve, reject) => {
-//         apiCall(name, params, resolve, reject);
-//       });
-//   },
-// });
+    return function () {
+      var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      return new Promise(function (resolve, reject) {
+        apiCall(name, params, resolve, reject);
+      });
+    };
+  }
+});
 
-exports.default = Lbry;
+// export default Lbry;
 
 /***/ }),
 /* 10 */
