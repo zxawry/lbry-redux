@@ -222,10 +222,15 @@ export function doCreateChannel(name: string, amount: number) {
         // outputs[0] is the certificate
         // outputs[1] is the change from the tx, not in the app currently
         .then((result: ChannelCreateResponse) => {
-          const channelClaim = result.outputs[0];
+          const channelClaim: ChannelClaim = result.outputs[0];
+          const channelUri: string = channelClaim.permanent_url;
           dispatch({
             type: ACTIONS.CREATE_CHANNEL_COMPLETED,
             data: { channelClaim },
+          });
+          dispatch({
+            type: ACTIONS.SET_MY_ACTIVE_CHANNEL_URI,
+            data: channelUri,
           });
         })
         .catch(error => {
@@ -252,5 +257,12 @@ export function doFetchChannelListMine() {
     };
 
     Lbry.channel_list().then(callback);
+  };
+}
+
+export function doSetMyActiveChannelUri(activeChannelUri: string) {
+  return {
+    type: ACTIONS.SET_MY_ACTIVE_CHANNEL_URI,
+    data: activeChannelUri,
   };
 }

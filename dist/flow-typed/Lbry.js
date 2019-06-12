@@ -106,6 +106,9 @@ declare type ChannelCreateResponse = GenericTxResponse & {
   outputs: Array<ChannelClaim>,
 };
 
+declare type CommentCreateResponse = Comment;
+declare type CommentListResponse = Array<Comment>;
+
 declare type ChannelListResponse = Array<ChannelClaim>;
 
 declare type FileListResponse = Array<FileListItem>;
@@ -182,6 +185,9 @@ declare type LbryTypes = {
   blob_delete: (params: {}) => Promise<string>,
   blob_list: (params: {}) => Promise<BlobListResponse>,
 
+  // Commenting
+  comment_list: (params: {}) => Promise<CommentListResponse>,
+  comment_create: (params: {}) => Promise<CommentCreateResponse>,
   // Wallet utilities
   account_balance: (params: {}) => Promise<string>,
   account_decrypt: (prams: {}) => Promise<boolean>,

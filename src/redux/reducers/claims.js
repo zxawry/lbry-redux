@@ -9,7 +9,7 @@
 // - Sean
 
 import * as ACTIONS from 'constants/action_types';
-import { buildURI, parseURI } from 'lbryURI';
+import { buildURI } from 'lbryURI';
 
 type State = {
   channelClaimCounts: { [string]: number },
@@ -21,6 +21,7 @@ type State = {
   abandoningById: { [string]: boolean },
   fetchingChannelClaims: { [string]: number },
   fetchingMyChannels: boolean,
+  myActiveChannelUri: string,
   claimsByChannel: {
     [string]: {
       all: Array<string>,
@@ -41,6 +42,7 @@ const defaultState = {
   // Storing sets in reducers can cause issues
   myChannelClaims: new Set(),
   fetchingMyChannels: false,
+  myActiveChannelUri: '',
   abandoningById: {},
   pendingById: {},
 };
@@ -60,6 +62,14 @@ reducers[ACTIONS.RESOLVE_URIS_COMPLETED] = (state: State, action: any): State =>
       }
     }
   );
+
+  reducers[ACTIONS.SET_MY_ACTIVE_CHANNEL_URI] = (state, action) => {
+    const activeChannel = action.data;
+
+    return Object.assign({}, state, {
+      myActiveChannelUri: activeChannel,
+    });
+  };
 
   // $FlowFixMe
   Object.entries(resolveInfo).forEach(([uri, { certificate, claim }]) => {

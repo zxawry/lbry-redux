@@ -17,6 +17,24 @@ export const selectCurrentChannelPage = createSelector(
   state => state.currentChannelPage || 1
 );
 
+export const makeSelectChannelUriForName = (channelName: string) =>
+  createSelector(
+    selectClaimsByUri,
+    (byUri) => {
+      const uris = Object.keys(byUri);
+      const matchingUris = uris.filter( uri =>  uri.startsWith('lbry://' + channelName + '#'));
+      if (matchingUris.length > 1) {
+        // go through myClaims for matchingUri === permanent_url
+      }
+      return matchingUris[0];
+    }
+  );
+
+export const selectMyActiveChannelUri = createSelector(
+  selectState,
+  state => state.myActiveChannelUri || 1
+);
+
 export const selectClaimsByUri = createSelector(
   selectState,
   selectClaimsById,

@@ -98,6 +98,15 @@ const SET_CONTENT_POSITION = 'SET_CONTENT_POSITION';
 const SET_CONTENT_LAST_VIEWED = 'SET_CONTENT_LAST_VIEWED';
 const CLEAR_CONTENT_HISTORY_URI = 'CLEAR_CONTENT_HISTORY_URI';
 const CLEAR_CONTENT_HISTORY_ALL = 'CLEAR_CONTENT_HISTORY_ALL';
+const SET_MY_ACTIVE_CHANNEL_URI = 'SET_MY_ACTIVE_CHANNEL_URI';
+
+// Comments
+const COMMENT_LIST_STARTED = 'COMMENT_LIST_STARTED';
+const COMMENT_LIST_COMPLETED = 'COMMENT_LIST_COMPLETED';
+const COMMENT_LIST_UPDATED = 'COMMENT_LIST_UPDATED';
+const COMMENT_CREATE_STARTED = 'COMMENT_CREATE_STARTED';
+const COMMENT_CREATE_COMPLETED = 'COMMENT_CREATE_COMPLETED';
+const COMMENT_CREATE_FAILED = 'COMMENT_CREATE_FAILED';
 
 // Files
 const FILE_LIST_STARTED = 'FILE_LIST_STARTED';
@@ -323,6 +332,13 @@ var action_types = /*#__PURE__*/Object.freeze({
     SET_CONTENT_LAST_VIEWED: SET_CONTENT_LAST_VIEWED,
     CLEAR_CONTENT_HISTORY_URI: CLEAR_CONTENT_HISTORY_URI,
     CLEAR_CONTENT_HISTORY_ALL: CLEAR_CONTENT_HISTORY_ALL,
+    SET_MY_ACTIVE_CHANNEL_URI: SET_MY_ACTIVE_CHANNEL_URI,
+    COMMENT_LIST_STARTED: COMMENT_LIST_STARTED,
+    COMMENT_LIST_COMPLETED: COMMENT_LIST_COMPLETED,
+    COMMENT_LIST_UPDATED: COMMENT_LIST_UPDATED,
+    COMMENT_CREATE_STARTED: COMMENT_CREATE_STARTED,
+    COMMENT_CREATE_COMPLETED: COMMENT_CREATE_COMPLETED,
+    COMMENT_CREATE_FAILED: COMMENT_CREATE_FAILED,
     FILE_LIST_STARTED: FILE_LIST_STARTED,
     FILE_LIST_SUCCEEDED: FILE_LIST_SUCCEEDED,
     FETCH_FILE_INFO_STARTED: FETCH_FILE_INFO_STARTED,
@@ -683,6 +699,9 @@ const Lbry = {
   sync_hash: (params = {}) => daemonCallWithResult('sync_hash', params),
   sync_apply: (params = {}) => daemonCallWithResult('sync_apply', params),
 
+  // Comments
+  comment_list: (params = {}) => daemonCallWithResult('comment_list', params),
+  comment_create: (params = {}) => daemonCallWithResult('comment_create', params),
   // Connect to the sdk
   connect: () => {
     if (Lbry.connectPromise === null) {
@@ -1175,6 +1194,15 @@ const selectState$1 = state => state.claims || {};
 const selectClaimsById = reselect.createSelector(selectState$1, state => state.byId || {});
 
 const selectCurrentChannelPage = reselect.createSelector(selectState$1, state => state.currentChannelPage || 1);
+
+const makeSelectChannelUriForName = channelName => reselect.createSelector(selectClaimsByUri, byUri => {
+  const uris = Object.keys(byUri);
+  const matchingUris = uris.filter(uri => uri.startsWith('lbry://' + channelName + '#'));
+  if (matchingUris.length > 1) ;
+  return matchingUris[0];
+});
+
+const selectMyActiveChannelUri = reselect.createSelector(selectState$1, state => state.myActiveChannelUri || 1);
 
 const selectClaimsByUri = reselect.createSelector(selectState$1, selectClaimsById, (state, byId) => {
   const byUri = state.claimsByUri || {};
@@ -2133,9 +2161,14 @@ function doCreateChannel(name, amount) {
     // outputs[1] is the change from the tx, not in the app currently
     .then(result => {
       const channelClaim = result.outputs[0];
+      const channelUri = channelClaim.permanent_url;
       dispatch({
         type: CREATE_CHANNEL_COMPLETED,
         data: { channelClaim }
+      });
+      dispatch({
+        type: SET_MY_ACTIVE_CHANNEL_URI,
+        data: channelUri
       });
     }).catch(error => {
       dispatch({
@@ -2160,6 +2193,13 @@ function doFetchChannelListMine() {
     };
 
     lbryProxy.channel_list().then(callback);
+  };
+}
+
+function doSetMyActiveChannelUri(activeChannelUri) {
+  return {
+    type: SET_MY_ACTIVE_CHANNEL_URI,
+    data: activeChannelUri
   };
 }
 
@@ -2689,6 +2729,70 @@ function savePosition(claimId, outpoint, position) {
 
 //      
 
+function doCommentList(uri) {
+  return (dispatch, getState) => {
+    const state = getState();
+    const claim = selectClaimsByUri(state)[uri];
+    const claimId = claim ? claim.claim_id : null;
+
+    dispatch({
+      type: COMMENT_LIST_STARTED
+    });
+    lbryProxy.comment_list({
+      claim_id: claimId
+    }).then(results => {
+      dispatch({
+        type: COMMENT_LIST_COMPLETED,
+        data: {
+          comments: results,
+          claimId: claimId,
+          uri: uri
+        }
+      });
+    }).catch(error => {
+      console.log(error);
+    });
+  };
+}
+
+function doCommentCreate(comment = '', claim_id = '', channel_id, parent_id) {
+  return dispatch => {
+    dispatch({
+      type: COMMENT_CREATE_STARTED
+    });
+    return lbryProxy.comment_create({
+      comment,
+      claim_id,
+      channel_id
+    }).then(result => {
+      dispatch({
+        type: COMMENT_CREATE_COMPLETED,
+        data: {
+          response: result
+        }
+      });
+      dispatch({
+        type: COMMENT_LIST_UPDATED,
+        data: {
+          comment: result,
+          claimId: claim_id
+        }
+      });
+    }).catch(error => {
+      dispatch({
+        type: COMMENT_CREATE_FAILED,
+        data: error
+      });
+      dispatch(doToast({
+        message: 'Oops, someone broke comments.',
+        isError: true
+      }));
+    });
+  };
+}
+
+//      
+
 const reducers = {};
 const defaultState = {
   byId: {},
@@ -2701,6 +2805,7 @@ const defaultState = {
   // Storing sets in reducers can cause issues
   myChannelClaims: new Set(),
   fetchingMyChannels: false,
+  myActiveChannelUri: '',
   abandoningById: {},
   pendingById: {}
 };
@@ -2718,6 +2823,14 @@ reducers[RESOLVE_URIS_COMPLETED] = (state, action) => {
       channelClaimCounts[uri] = resolveResponse.claimsInChannel;
     }
   });
+
+  reducers[SET_MY_ACTIVE_CHANNEL_URI] = (state, action) => {
+    const activeChannel = action.data;
+
+    return Object.assign({}, state, {
+      myActiveChannelUri: activeChannel
+    });
+  };
 
   // $FlowFixMe
   Object.entries(resolveInfo).forEach(([uri, { certificate, claim }]) => {
@@ -3630,6 +3743,70 @@ function contentReducer(state = defaultState$6, action) {
   return state;
 }
 
+//      
+
+// TODO change to handleActions()
+// const commentsReducer = handleActions( {
+const reducers$4 = {};
+
+const defaultState$7 = {
+  byId: {},
+  commentsByUri: {},
+  isLoading: false
+};
+
+reducers$4[COMMENT_CREATE_STARTED] = (state, action) => Object.assign({}, state, {
+  isLoading: true
+});
+
+reducers$4[COMMENT_CREATE_FAILED] = (state, action) => {
+  // TODO: handle error.. what else?
+  return state;
+};
+
+reducers$4[COMMENT_CREATE_COMPLETED] = (state, action) => {
+  const { comments } = action.data;
+  return state;
+};
+
+reducers$4[COMMENT_LIST_UPDATED] = (state, action) => {
+  const { comment, claimId } = action.data;
+  const byId = Object.assign({}, state.byId);
+  const comments = byId[claimId];
+  const newComments = comments.slice();
+  newComments.unshift(comment);
+  byId[claimId] = newComments;
+  return Object.assign({}, state, {
+    byId
+  });
+};
+
+reducers$4[COMMENT_LIST_STARTED] = state => Object.assign({}, state, {
+  isLoading: true
+});
+
+reducers$4[COMMENT_LIST_COMPLETED] = (state, action) => {
+  const { comments, claimId, uri } = action.data;
+  const byId = Object.assign({}, state.byId);
+  const commentsByUri = Object.assign({}, state.commentsByUri);
+
+  if (comments['items']) {
+    byId[claimId] = comments['items'];
+    commentsByUri[uri] = claimId;
+  }
+  return Object.assign({}, state, {
+    byId,
+    commentsByUri,
+    isLoading: false
+  });
+};
+
+function commentReducer(state = defaultState$7, action) {
+  const handler = reducers$4[action.type];
+  if (handler) return handler(state, action);
+  return state;
+}
+
 const selectState$5 = state => state.content || {};
 
 const makeSelectContentPositionForUri = uri => reselect.createSelector(selectState$5, makeSelectClaimForUri(uri), (state, claim) => {
@@ -3667,6 +3844,31 @@ const selectError = reselect.createSelector(selectState$6, state => {
   return null;
 });
 
+//      
+
+const selectState$7 = state => state.comments || {};
+
+const selectCommentsById = reselect.createSelector(selectState$7, state => state.byId || {});
+
+const selectCommentsByUri = reselect.createSelector(selectState$7, state => {
+  const byUri = state.commentsByUri || {};
+  const comments = {};
+  Object.keys(byUri).forEach(uri => {
+    const claimId = byUri[uri];
+    if (claimId === null) {
+      comments[uri] = null;
+    } else {
+      comments[uri] = claimId;
+    }
+  });
+  return comments;
+});
+
+const makeSelectCommentsForUri = uri => reselect.createSelector(selectCommentsById, selectCommentsByUri, (byId, byUri) => {
+  const claimId = byUri[uri];
+  return byId && byId[claimId];
+});
+
 exports.ACTIONS = action_types;
 exports.Lbry = lbryProxy;
 exports.PAGES = pages;
@@ -3679,6 +3881,7 @@ exports.TRANSACTIONS = transaction_types;
 exports.batchActions = batchActions;
 exports.buildURI = buildURI;
 exports.claimsReducer = claimsReducer;
+exports.commentReducer = commentReducer;
 exports.contentReducer = contentReducer;
 exports.convertToShareLink = convertToShareLink;
 exports.creditsToString = creditsToString;
@@ -3686,6 +3889,8 @@ exports.doAbandonClaim = doAbandonClaim;
 exports.doBalanceSubscribe = doBalanceSubscribe;
 exports.doBlurSearchInput = doBlurSearchInput;
 exports.doCheckAddressIsMine = doCheckAddressIsMine;
+exports.doCommentCreate = doCommentCreate;
+exports.doCommentList = doCommentList;
 exports.doCreateChannel = doCreateChannel;
 exports.doDeletePurchasedUri = doDeletePurchasedUri;
 exports.doDismissError = doDismissError;
@@ -3710,6 +3915,7 @@ exports.doSendTip = doSendTip;
 exports.doSetDraftTransactionAddress = doSetDraftTransactionAddress;
 exports.doSetDraftTransactionAmount = doSetDraftTransactionAmount;
 exports.doSetFileListSort = doSetFileListSort;
+exports.doSetMyActiveChannelUri = doSetMyActiveChannelUri;
 exports.doSetTransactionListFilter = doSetTransactionListFilter;
 exports.doToast = doToast;
 exports.doTotalBalanceSubscribe = doTotalBalanceSubscribe;
@@ -3731,12 +3937,14 @@ exports.isNameValid = isNameValid;
 exports.isURIClaimable = isURIClaimable;
 exports.isURIValid = isURIValid;
 exports.makeSelectChannelForClaimUri = makeSelectChannelForClaimUri;
+exports.makeSelectChannelUriForName = makeSelectChannelUriForName;
 exports.makeSelectClaimForUri = makeSelectClaimForUri;
 exports.makeSelectClaimIsMine = makeSelectClaimIsMine;
 exports.makeSelectClaimIsNsfw = makeSelectClaimIsNsfw;
 exports.makeSelectClaimIsPending = makeSelectClaimIsPending;
 exports.makeSelectClaimsInChannelForCurrentPageState = makeSelectClaimsInChannelForCurrentPageState;
 exports.makeSelectClaimsInChannelForPage = makeSelectClaimsInChannelForPage;
+exports.makeSelectCommentsForUri = makeSelectCommentsForUri;
 exports.makeSelectContentPositionForUri = makeSelectContentPositionForUri;
 exports.makeSelectContentTypeForUri = makeSelectContentTypeForUri;
 exports.makeSelectCoverForUri = makeSelectCoverForUri;
@@ -3800,6 +4008,7 @@ exports.selectIsFetchingTransactions = selectIsFetchingTransactions;
 exports.selectIsSearching = selectIsSearching;
 exports.selectIsSendingSupport = selectIsSendingSupport;
 exports.selectLastPurchasedUri = selectLastPurchasedUri;
+exports.selectMyActiveChannelUri = selectMyActiveChannelUri;
 exports.selectMyActiveClaims = selectMyActiveClaims;
 exports.selectMyChannelClaims = selectMyChannelClaims;
 exports.selectMyClaims = selectMyClaims;

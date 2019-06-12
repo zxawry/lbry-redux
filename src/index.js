@@ -45,6 +45,7 @@ export {
   doResolveUri,
   doFetchChannelListMine,
   doCreateChannel,
+  doSetMyActiveChannelUri,
 } from 'redux/actions/claims';
 
 export { doDeletePurchasedUri, doPurchaseUri, doFileGet } from 'redux/actions/file';
@@ -87,6 +88,8 @@ export {
   doUpdateBlockHeight,
 } from 'redux/actions/wallet';
 
+export { doCommentList, doCommentCreate } from 'redux/actions/comments';
+
 // utils
 export { batchActions } from 'util/batchActions';
 export { parseQueryParams, toQueryString } from 'util/query_params';
@@ -101,6 +104,7 @@ export { notificationsReducer } from 'redux/reducers/notifications';
 export { searchReducer } from 'redux/reducers/search';
 export { walletReducer } from 'redux/reducers/wallet';
 export { contentReducer } from 'redux/reducers/content';
+export { commentReducer } from 'redux/reducers/comments';
 
 // selectors
 export { makeSelectContentPositionForUri } from 'redux/selectors/content';
@@ -160,7 +164,11 @@ export {
   selectPlayingUri,
   selectChannelClaimCounts,
   selectCurrentChannelPage,
+  selectMyActiveChannelUri,
+  makeSelectChannelUriForName,
 } from 'redux/selectors/claims';
+
+export { makeSelectCommentsForUri } from 'redux/selectors/comments';
 
 export {
   makeSelectFileInfoForUri,
